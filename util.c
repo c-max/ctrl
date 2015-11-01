@@ -54,6 +54,7 @@ typedef struct Settings {
 	Argument * firstArgument;
 	int argNb;
 	int stop;
+	int testmode;
 	
 } Settings;
 
@@ -66,27 +67,31 @@ static void (*externalSignalHandler)(int);
 void msg(const char *format, ...) {
 	static int log = 0;
 	
+	int nb = 0;
+		
 	if (!log) {
 
+		fprintf(stderr, "%s: ", prog);
+		
 		va_list args;
 		va_start(args,format);
-		vfprintf(stderr, format, args);
+		nb = vfprintf(stderr, format, args);
 		va_end(args);
-		if (fprintf(stderr,"\n") < 0 ) {
+		
+		if (nb < 0) {
 			log = 1;
 			openlog(prog, LOG_PID, LOG_USER);
-		}
+		} else
+			fprintf(stderr, "\n");
 	}
-   
+
 	if (log) {
-	
+
 		char * str = NULL;
-	
 		va_list args;
 		va_start(args,format);
 		int len = vasprintf(&str, format,args);
 		va_end(args);
-	   
 		if (len >= 0) {
 			syslog(LOG_ERR, "%s", str);		
 			free(str);
@@ -158,7 +163,7 @@ static void free_settings() {
 
 static void signalHandler(int sig) {
 	char * sigStr = strsignal(sig); /* no free */
-	info("Signal %d (%s) caught.\n",sig,sigStr);
+	info("Signal %d (%s) caught.",sig,sigStr);
 	settings->stop = 1;
 	if (externalSignalHandler) 
 		externalSignalHandler(sig);
@@ -167,6 +172,8 @@ static void signalHandler(int sig) {
 static int init_settings(char * progname, int argc, char *argv[], char *optString) {
 
 	prog = progname;
+
+	info("Init.");
 
 	if (settings != NULL) {
 		error("init_util already done.");
@@ -188,6 +195,7 @@ static int init_settings(char * progname, int argc, char *argv[], char *optStrin
 	settings->firstArgument = NULL;
 	settings->argNb = 0;
 	settings->stop = 0;
+	settings->testmode = 0;
 	
 	int opt;
 	int err = 0;
@@ -222,10 +230,10 @@ static int init_settings(char * progname, int argc, char *argv[], char *optStrin
 		signal(SIGTERM, signalHandler);
 		signal(SIGPIPE, signalHandler);
 		
-		int testmode = get_opt_str('t', 0, NULL) != -1 ? 1 : 0;
+		settings->testmode = get_opt_str('t', 0, NULL) == 1 ? 1 : 0;
 		
-		signal(SIGINT, testmode ? signalHandler : SIG_IGN);
-		signal(SIGQUIT, testmode ? signalHandler : SIG_IGN);
+		signal(SIGINT, settings->testmode ? signalHandler : SIG_IGN);
+		signal(SIGQUIT, settings->testmode ? signalHandler : SIG_IGN);
 	}
 	
 	if (err) {

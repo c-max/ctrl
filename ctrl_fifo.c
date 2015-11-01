@@ -53,6 +53,7 @@ static void free_settings() {
 
 
 static void my_exit(int retVal) {
+	
 	free_settings();
 	info("Exit.");
 	exit(retVal);

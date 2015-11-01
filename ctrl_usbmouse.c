@@ -75,7 +75,7 @@ int my_exit(int retVal) {
 	if (settings->ctx != NULL) 
 		libusb_exit(settings->ctx);	
 
-	info("Exit done.");
+	info("Exit.");
 	exit(retVal);
 }
 
